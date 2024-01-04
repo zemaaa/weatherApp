@@ -1,5 +1,6 @@
 package com.example.tessstttt
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -33,6 +34,7 @@ import com.android.volley.Request
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.example.tessstttt.ui.theme.lightBlue
+
 import org.json.JSONObject
 
 class MainActivity : ComponentActivity() {
@@ -43,35 +45,20 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
-
 @Composable
 fun WeatherApp() {
 
-    var cityName by remember { mutableStateOf("") }
-    var cityTime by remember { mutableStateOf("") }
-    var weatherText by remember { mutableStateOf("Loading...") }
-    var weatherState by remember { mutableStateOf("") }
-    var weatherIcon by remember { mutableStateOf("") }
-
+    var weather by remember { mutableStateOf<Weather?>(null) }
     val context = LocalContext.current
 
-    LaunchedEffect(true) {
-        // Fetch weather data
+    LaunchedEffect(Unit) {
         fetchWeatherData(context, "Izmail") { result ->
-            result.onSuccess { weather ->
-                weatherText = "${weather.currentTemp}°C"
-                weatherState = weather.currentCondiotin
-                cityName = weather.name
-                cityTime = weather.timeNow
-                weatherIcon = "https:${weather.weatherIcon}"
-
-            }
-            result.onFailure {
-                weatherText = "Error fetching weather data"
-
+            result.onSuccess { data ->
+                weather = data
             }
         }
     }
+
     Image(
         painter = painterResource(id = R.drawable.background_image),
         contentDescription = null,
@@ -105,28 +92,34 @@ fun WeatherApp() {
                         .padding(5.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = cityTime,
-                        style = TextStyle(fontSize = 15.sp),
-                        color = Color.White
-                    )
+                    weather?.let {
+                        Text(
+                            text = it.timeNow,
+                            style = TextStyle(fontSize = 15.sp),
+                            color = Color.White
+                        )
+                    }
                     AsyncImage(
-                        model = weatherIcon,
+                        model = weather?.weatherIcon,
                         contentDescription = "im2",
                         modifier = Modifier
                             .size(30.dp)
                     )
                 }
-                Text(
-                    text = cityName,
-                    style = TextStyle(fontSize = 20.sp),
-                    color = Color.White
-                )
-                Text(
-                    text = weatherText,
-                    style = TextStyle(fontSize = 35.sp),
-                    color = Color.White
-                )
+                weather?.let {
+                    Text(
+                        text = it.name,
+                        style = TextStyle(fontSize = 20.sp),
+                        color = Color.White
+                    )
+                }
+                weather?.let {
+                    Text(
+                        text = it.currentTemp,
+                        style = TextStyle(fontSize = 35.sp),
+                        color = Color.White
+                    )
+                }
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -138,11 +131,13 @@ fun WeatherApp() {
                         contentDescription = null,
                         tint = Color.White,
                     )
-                    Text(
-                        text = weatherState,
-                        style = TextStyle(fontSize = 15.sp),
-                        color = Color.White
-                    )
+                    weather?.let {
+                        Text(
+                            text = it.currentCondiotin,
+                            style = TextStyle(fontSize = 15.sp),
+                            color = Color.White
+                        )
+                    }
                     Icon(
                         painter = painterResource(id = R.drawable.refresh_img),
                         contentDescription = null,
@@ -153,15 +148,13 @@ fun WeatherApp() {
         }
     }
 }
-
-data class Weather(
-    val name: String,
-    val timeNow: String,
-    val currentTemp: String,
-    val currentCondiotin: String,
-    val weatherIcon: String
-)
-
+        data class Weather(
+            val name: String,
+            val timeNow: String,
+            val currentTemp: String,
+            val currentCondiotin: String,
+            val weatherIcon: String
+        )
 fun fetchWeatherData(
     context: android.content.Context,
     cityName: String,
@@ -173,18 +166,22 @@ fun fetchWeatherData(
 
     val request = StringRequest(Request.Method.GET, url,
         { response ->
-            val name = JSONObject(response).getJSONObject("location").getString("name")
-            val timeNow = JSONObject(response).getJSONObject("location").getString("localtime")
-            val currentTemp = JSONObject(response).getJSONObject("current").getString("temp_c")
-            val currentCondiotin =
-                JSONObject(response).getJSONObject("current").getJSONObject("condition")
-                    .getString("text")
-            val weatherIcon =
-                JSONObject(response).getJSONObject("current").getJSONObject("condition")
-                    .getString("icon")
+            try {
+              val weather = Weather(
+                    JSONObject(response).getJSONObject("location").getString("name"),
+                    JSONObject(response).getJSONObject("location").getString("localtime"),
+                    JSONObject(response).getJSONObject("current").getString("temp_c"),
+                    JSONObject(response).getJSONObject("current").getJSONObject("condition")
+                        .getString("text"),
+                    "https:${JSONObject(response).getJSONObject("current").getJSONObject("condition")
+                        .getString("icon")}"
+                )
+                onResult(Result.success(weather))
+            } catch (e: Exception) {
 
-            val weather = Weather(name, timeNow, currentTemp, currentCondiotin, weatherIcon)
-            onResult(Result.success(weather))
+                e.printStackTrace()
+                onResult(Result.failure(e))
+            }
         },
         { error ->
             onResult(Result.failure(error))
