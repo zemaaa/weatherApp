@@ -51,6 +51,7 @@ android {
 
 dependencies {
 
+    implementation("androidx.compose.foundation:foundation-android:1.5.4")
     dependencies {
         implementation ("com.android.volley:volley:1.2.1")
         implementation ("com.google.accompanist:accompanist-pager:0.19.0")

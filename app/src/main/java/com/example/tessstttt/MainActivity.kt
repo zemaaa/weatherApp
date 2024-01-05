@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.material.*
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -19,6 +20,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialogDefaults.shape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,13 +34,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+
+import androidx.compose.ui.text.input.KeyboardType
 import com.android.volley.Request
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.example.tessstttt.ui.theme.lightBlue
 
 import org.json.JSONObject
-
+const val API_KEY = "2424de849688485f9b583700231812"
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -47,12 +54,13 @@ class MainActivity : ComponentActivity() {
 }
 @Composable
 fun WeatherApp() {
-
+    var cityInput by remember { mutableStateOf("Izmail") }
     var weather by remember { mutableStateOf<Weather?>(null) }
     val context = LocalContext.current
+    var isTextFieldVisible by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        fetchWeatherData(context, "Izmail") { result ->
+    LaunchedEffect(cityInput) {
+        fetchWeatherData(context, cityInput) { result ->
             result.onSuccess { data ->
                 weather = data
             }
@@ -130,6 +138,11 @@ fun WeatherApp() {
                         painter = painterResource(id = R.drawable.search_icon),
                         contentDescription = null,
                         tint = Color.White,
+                        modifier = Modifier
+                            .clickable {
+                                isTextFieldVisible = !isTextFieldVisible
+
+                            }
                     )
                     weather?.let {
                         Text(
@@ -146,6 +159,20 @@ fun WeatherApp() {
                 }
             }
         }
+        if(isTextFieldVisible){
+
+                        EnterCityName(
+
+                            value = cityInput,
+                            onValueChange = { cityInput = it },
+                            modifier = Modifier
+                                .background(Color.Magenta)
+
+                                .fillMaxWidth()
+
+                        )
+
+        }
     }
 }
         data class Weather(
@@ -157,11 +184,13 @@ fun WeatherApp() {
         )
 fun fetchWeatherData(
     context: android.content.Context,
-    cityName: String,
+    cityInput: String,
     onResult: (Result<Weather>) -> Unit
 ) {
     val url =
-        "https://api.weatherapi.com/v1/forecast.json?key=2424de849688485f9b583700231812&q=Izmail&days=1&aqi=no&alerts=no"
+        "https://api.weatherapi.com/v1/forecast.json?key=$API_KEY" +
+                "&q=$cityInput" +
+                "&days=1&aqi=no&alerts=no"
     val queue = Volley.newRequestQueue(context)
 
     val request = StringRequest(Request.Method.GET, url,
@@ -187,4 +216,22 @@ fun fetchWeatherData(
             onResult(Result.failure(error))
         })
     queue.add(request)
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EnterCityName(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+
+) {
+    androidx.compose.material3.TextField(
+        value = value,
+        onValueChange = onValueChange,
+        singleLine = true,
+        label = { Text(text = "City") },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
+        modifier = modifier
+    )
 }
